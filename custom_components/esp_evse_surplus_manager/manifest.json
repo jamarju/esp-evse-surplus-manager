@@ -7,7 +7,9 @@
   "integration_type": "hub",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/jamarju/esp-evse-surplus-manager/issues",
-  "loggers": ["custom_components.esp_evse_surplus_manager"],
+  "loggers": [
+    "custom_components.esp_evse_surplus_manager"
+  ],
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
