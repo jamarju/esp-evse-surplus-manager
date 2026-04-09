@@ -1493,6 +1493,595 @@ class SimulationTests(unittest.TestCase):
         self.assertEqual(rebalance_tick.charger("ev1").desired_actual_amps, 6)
         self.assertEqual(rebalance_tick.charger("ev3").desired_actual_amps, 6)
 
+    def test_sleeping_higher_priority_ev_recovers_without_replug_once_it_wants_charge(
+        self,
+    ) -> None:
+        controller = SurplusController(["ev1", "ev2"])
+        start = datetime(2026, 1, 1, tzinfo=UTC)
+
+        for step in range(LOCKOUT_OBSERVATION_COUNT):
+            baseline_snapshot = controller.step(
+                now=start + timedelta(seconds=step * TEST_TICK_SECONDS),
+                grid_power_watts=_grid_power_for_available_amps(
+                    12,
+                    (
+                        charger_input(
+                            "ev1",
+                            priority=1,
+                            connected=False,
+                            enabled=False,
+                        ),
+                        charger_input(
+                            "ev2",
+                            priority=2,
+                            connected=True,
+                            enabled=True,
+                            charging=True,
+                            measured_actual_amps=12,
+                            pilot_setpoint_amps=12,
+                        ),
+                    ),
+                ),
+                grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+                max_grid_import_watts=0,
+                hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+                chargers=(
+                    charger_input(
+                        "ev1",
+                        priority=1,
+                        connected=False,
+                        enabled=False,
+                    ),
+                    charger_input(
+                        "ev2",
+                        priority=2,
+                        connected=True,
+                        enabled=True,
+                        charging=True,
+                        measured_actual_amps=12,
+                        pilot_setpoint_amps=12,
+                    ),
+                ),
+            )
+            self.assertFalse(baseline_snapshot.charger("ev1").should_enable)
+
+        sleeping_plug_snapshot = controller.step(
+            now=start + timedelta(seconds=LOCKOUT_OBSERVATION_COUNT * TEST_TICK_SECONDS),
+            grid_power_watts=_grid_power_for_available_amps(
+                12,
+                (
+                    charger_input(
+                        "ev1",
+                        priority=1,
+                        connected=True,
+                        charging=False,
+                        enabled=False,
+                    ),
+                    charger_input(
+                        "ev2",
+                        priority=2,
+                        connected=True,
+                        enabled=True,
+                        charging=True,
+                        measured_actual_amps=12,
+                        pilot_setpoint_amps=12,
+                    ),
+                ),
+            ),
+            grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+            max_grid_import_watts=0,
+            hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+            chargers=(
+                charger_input(
+                    "ev1",
+                    priority=1,
+                    connected=True,
+                    charging=False,
+                    enabled=False,
+                ),
+                charger_input(
+                    "ev2",
+                    priority=2,
+                    connected=True,
+                    enabled=True,
+                    charging=True,
+                    measured_actual_amps=12,
+                    pilot_setpoint_amps=12,
+                ),
+            ),
+        )
+
+        self.assertTrue(sleeping_plug_snapshot.charger("ev1").should_enable)
+        self.assertEqual(sleeping_plug_snapshot.charger("ev1").pilot_request_amps, 6)
+        self.assertEqual(sleeping_plug_snapshot.charger("ev1").desired_actual_amps, 0)
+        self.assertTrue(sleeping_plug_snapshot.charger("ev2").should_enable)
+
+        sleeping_alone_snapshot = controller.step(
+            now=start
+            + timedelta(seconds=(LOCKOUT_OBSERVATION_COUNT + 1) * TEST_TICK_SECONDS),
+            grid_power_watts=_grid_power_for_available_amps(
+                12,
+                (
+                    charger_input(
+                        "ev1",
+                        priority=1,
+                        connected=True,
+                        charging=False,
+                        enabled=True,
+                        measured_actual_amps=0,
+                        pilot_setpoint_amps=6,
+                    ),
+                    charger_input(
+                        "ev2",
+                        priority=2,
+                        connected=False,
+                        enabled=False,
+                        measured_actual_amps=0,
+                    ),
+                ),
+            ),
+            grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+            max_grid_import_watts=0,
+            hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+            chargers=(
+                charger_input(
+                    "ev1",
+                    priority=1,
+                    connected=True,
+                    charging=False,
+                    enabled=True,
+                    measured_actual_amps=0,
+                    pilot_setpoint_amps=6,
+                ),
+                charger_input(
+                    "ev2",
+                    priority=2,
+                    connected=False,
+                    enabled=False,
+                    measured_actual_amps=0,
+                ),
+            ),
+        )
+
+        self.assertTrue(sleeping_alone_snapshot.charger("ev1").should_enable)
+        self.assertEqual(sleeping_alone_snapshot.charger("ev1").pilot_request_amps, 6)
+        self.assertEqual(sleeping_alone_snapshot.charger("ev1").desired_actual_amps, 0)
+
+        resumed_snapshot = controller.step(
+            now=start
+            + timedelta(seconds=(LOCKOUT_OBSERVATION_COUNT + 2) * TEST_TICK_SECONDS),
+            grid_power_watts=_grid_power_for_available_amps(
+                12,
+                (
+                    charger_input(
+                        "ev1",
+                        priority=1,
+                        connected=True,
+                        charging=True,
+                        enabled=True,
+                        measured_actual_amps=6,
+                        pilot_setpoint_amps=6,
+                    ),
+                    charger_input(
+                        "ev2",
+                        priority=2,
+                        connected=False,
+                        enabled=False,
+                        measured_actual_amps=0,
+                    ),
+                ),
+            ),
+            grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+            max_grid_import_watts=0,
+            hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+            chargers=(
+                charger_input(
+                    "ev1",
+                    priority=1,
+                    connected=True,
+                    charging=True,
+                    enabled=True,
+                    measured_actual_amps=6,
+                    pilot_setpoint_amps=6,
+                ),
+                charger_input(
+                    "ev2",
+                    priority=2,
+                    connected=False,
+                    enabled=False,
+                    measured_actual_amps=0,
+                ),
+            ),
+        )
+
+        self.assertTrue(resumed_snapshot.charger("ev1").should_enable)
+        self.assertEqual(resumed_snapshot.charger("ev1").desired_actual_amps, 12)
+        self.assertEqual(resumed_snapshot.charger("ev1").pilot_request_amps, 12)
+
+    def test_replugged_full_car_stays_on_6a_poke_and_rebalances_immediately_once_it_accepts_charge(
+        self,
+    ) -> None:
+        controller = SurplusController(["ev1", "ev2"])
+        start = datetime(2026, 1, 1, tzinfo=UTC)
+
+        initial_snapshot = controller.step(
+            now=start,
+            grid_power_watts=_grid_power_for_available_amps(
+                12,
+                (
+                    charger_input(
+                        "ev1",
+                        priority=1,
+                        connected=True,
+                        charging=True,
+                        enabled=True,
+                        measured_actual_amps=6,
+                        pilot_setpoint_amps=6,
+                    ),
+                    charger_input(
+                        "ev2",
+                        priority=2,
+                        connected=True,
+                        charging=True,
+                        enabled=True,
+                        measured_actual_amps=6,
+                        pilot_setpoint_amps=6,
+                    ),
+                ),
+            ),
+            grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+            max_grid_import_watts=0,
+            hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+            chargers=(
+                charger_input(
+                    "ev1",
+                    priority=1,
+                    connected=True,
+                    charging=True,
+                    enabled=True,
+                    measured_actual_amps=6,
+                    pilot_setpoint_amps=6,
+                ),
+                charger_input(
+                    "ev2",
+                    priority=2,
+                    connected=True,
+                    charging=True,
+                    enabled=True,
+                    measured_actual_amps=6,
+                    pilot_setpoint_amps=6,
+                ),
+            ),
+        )
+
+        unplugged_snapshot = controller.step(
+            now=start + timedelta(seconds=TEST_TICK_SECONDS),
+            grid_power_watts=_grid_power_for_available_amps(
+                12,
+                (
+                    charger_input(
+                        "ev1",
+                        priority=1,
+                        connected=False,
+                        charging=False,
+                        enabled=True,
+                        measured_actual_amps=0,
+                        pilot_setpoint_amps=initial_snapshot.charger(
+                            "ev1"
+                        ).pilot_request_amps,
+                    ),
+                    charger_input(
+                        "ev2",
+                        priority=2,
+                        connected=True,
+                        charging=True,
+                        enabled=True,
+                        measured_actual_amps=6,
+                        pilot_setpoint_amps=initial_snapshot.charger(
+                            "ev2"
+                        ).pilot_request_amps,
+                    ),
+                ),
+            ),
+            grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+            max_grid_import_watts=0,
+            hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+            chargers=(
+                charger_input(
+                    "ev1",
+                    priority=1,
+                    connected=False,
+                    charging=False,
+                    enabled=True,
+                    measured_actual_amps=0,
+                    pilot_setpoint_amps=initial_snapshot.charger(
+                        "ev1"
+                    ).pilot_request_amps,
+                ),
+                charger_input(
+                    "ev2",
+                    priority=2,
+                    connected=True,
+                    charging=True,
+                    enabled=True,
+                    measured_actual_amps=6,
+                    pilot_setpoint_amps=initial_snapshot.charger(
+                        "ev2"
+                    ).pilot_request_amps,
+                ),
+            ),
+        )
+
+        replugged_sleeping_snapshot = controller.step(
+            now=start + timedelta(seconds=TEST_TICK_SECONDS * 13),
+            grid_power_watts=_grid_power_for_available_amps(
+                12,
+                (
+                    charger_input(
+                        "ev1",
+                        priority=1,
+                        connected=True,
+                        charging=False,
+                        enabled=unplugged_snapshot.charger("ev1").should_enable,
+                        measured_actual_amps=0,
+                        pilot_setpoint_amps=unplugged_snapshot.charger(
+                            "ev1"
+                        ).pilot_request_amps,
+                    ),
+                    charger_input(
+                        "ev2",
+                        priority=2,
+                        connected=True,
+                        charging=True,
+                        enabled=unplugged_snapshot.charger("ev2").should_enable,
+                        measured_actual_amps=float(
+                            unplugged_snapshot.charger("ev2").desired_actual_amps
+                        ),
+                        pilot_setpoint_amps=unplugged_snapshot.charger(
+                            "ev2"
+                        ).pilot_request_amps,
+                    ),
+                ),
+            ),
+            grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+            max_grid_import_watts=0,
+            hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+            chargers=(
+                charger_input(
+                    "ev1",
+                    priority=1,
+                    connected=True,
+                    charging=False,
+                    enabled=unplugged_snapshot.charger("ev1").should_enable,
+                    measured_actual_amps=0,
+                    pilot_setpoint_amps=unplugged_snapshot.charger(
+                        "ev1"
+                    ).pilot_request_amps,
+                ),
+                charger_input(
+                    "ev2",
+                    priority=2,
+                    connected=True,
+                    charging=True,
+                    enabled=unplugged_snapshot.charger("ev2").should_enable,
+                    measured_actual_amps=float(
+                        unplugged_snapshot.charger("ev2").desired_actual_amps
+                    ),
+                    pilot_setpoint_amps=unplugged_snapshot.charger(
+                        "ev2"
+                    ).pilot_request_amps,
+                ),
+            ),
+        )
+
+        car_accepts_charge_snapshot = controller.step(
+            now=start + timedelta(seconds=TEST_TICK_SECONDS * 19),
+            grid_power_watts=_grid_power_for_available_amps(
+                12,
+                (
+                    charger_input(
+                        "ev1",
+                        priority=1,
+                        connected=True,
+                        charging=True,
+                        enabled=replugged_sleeping_snapshot.charger("ev1").should_enable,
+                        measured_actual_amps=6,
+                        pilot_setpoint_amps=replugged_sleeping_snapshot.charger(
+                            "ev1"
+                        ).pilot_request_amps,
+                    ),
+                    charger_input(
+                        "ev2",
+                        priority=2,
+                        connected=True,
+                        charging=True,
+                        enabled=replugged_sleeping_snapshot.charger("ev2").should_enable,
+                        measured_actual_amps=float(
+                            replugged_sleeping_snapshot.charger(
+                                "ev2"
+                            ).desired_actual_amps
+                        ),
+                        pilot_setpoint_amps=replugged_sleeping_snapshot.charger(
+                            "ev2"
+                        ).pilot_request_amps,
+                    ),
+                ),
+            ),
+            grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+            max_grid_import_watts=0,
+            hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+            chargers=(
+                charger_input(
+                    "ev1",
+                    priority=1,
+                    connected=True,
+                    charging=True,
+                    enabled=replugged_sleeping_snapshot.charger("ev1").should_enable,
+                    measured_actual_amps=6,
+                    pilot_setpoint_amps=replugged_sleeping_snapshot.charger(
+                        "ev1"
+                    ).pilot_request_amps,
+                ),
+                charger_input(
+                    "ev2",
+                    priority=2,
+                    connected=True,
+                    charging=True,
+                    enabled=replugged_sleeping_snapshot.charger("ev2").should_enable,
+                    measured_actual_amps=float(
+                        replugged_sleeping_snapshot.charger("ev2").desired_actual_amps
+                    ),
+                    pilot_setpoint_amps=replugged_sleeping_snapshot.charger(
+                        "ev2"
+                    ).pilot_request_amps,
+                ),
+            ),
+        )
+
+        self.assertTrue(initial_snapshot.charger("ev1").should_enable)
+        self.assertTrue(initial_snapshot.charger("ev2").should_enable)
+
+        self.assertTrue(unplugged_snapshot.charger("ev1").should_enable)
+        self.assertEqual(unplugged_snapshot.charger("ev1").pilot_request_amps, 6)
+        self.assertEqual(unplugged_snapshot.charger("ev2").desired_actual_amps, 12)
+
+        self.assertTrue(replugged_sleeping_snapshot.charger("ev1").should_enable)
+        self.assertEqual(replugged_sleeping_snapshot.charger("ev1").desired_actual_amps, 0)
+        self.assertEqual(replugged_sleeping_snapshot.charger("ev1").pilot_request_amps, 6)
+        self.assertEqual(
+            replugged_sleeping_snapshot.charger("ev2").desired_actual_amps,
+            12,
+        )
+
+        self.assertTrue(car_accepts_charge_snapshot.charger("ev1").should_enable)
+        self.assertTrue(car_accepts_charge_snapshot.charger("ev2").should_enable)
+        self.assertEqual(car_accepts_charge_snapshot.charger("ev1").desired_actual_amps, 6)
+        self.assertEqual(car_accepts_charge_snapshot.charger("ev2").desired_actual_amps, 6)
+        self.assertEqual(car_accepts_charge_snapshot.charger("ev1").pilot_request_amps, 6)
+        self.assertEqual(car_accepts_charge_snapshot.charger("ev2").pilot_request_amps, 6)
+
+    def test_replug_after_stale_switch_off_uses_contactor_open_time_for_lockout(
+        self,
+    ) -> None:
+        controller = SurplusController(["ev1", "ev2"])
+        start = datetime(2026, 1, 1, tzinfo=UTC)
+
+        initial_chargers = (
+            charger_input(
+                "ev1",
+                priority=1,
+                connected=True,
+                charging=True,
+                enabled=True,
+                measured_actual_amps=6,
+                pilot_setpoint_amps=6,
+            ),
+            charger_input(
+                "ev2",
+                priority=2,
+                connected=True,
+                charging=True,
+                enabled=True,
+                measured_actual_amps=6,
+                pilot_setpoint_amps=6,
+            ),
+        )
+        controller.step(
+            now=start,
+            grid_power_watts=_grid_power_for_available_amps(12, initial_chargers),
+            grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+            max_grid_import_watts=0,
+            hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+            chargers=initial_chargers,
+        )
+
+        disconnected_enabled = (
+            charger_input(
+                "ev1",
+                priority=1,
+                connected=False,
+                charging=False,
+                enabled=True,
+                measured_actual_amps=0,
+                pilot_setpoint_amps=6,
+            ),
+            charger_input(
+                "ev2",
+                priority=2,
+                connected=True,
+                charging=True,
+                enabled=True,
+                measured_actual_amps=18,
+                pilot_setpoint_amps=18,
+            ),
+        )
+        for step in range(1, LOCKOUT_RELEASE_STEP + 1):
+            controller.step(
+                now=start + timedelta(seconds=step * TEST_TICK_SECONDS),
+                grid_power_watts=_grid_power_for_available_amps(
+                    18,
+                    disconnected_enabled,
+                ),
+                grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+                max_grid_import_watts=0,
+                hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+                chargers=disconnected_enabled,
+            )
+
+        replugged_after_stale_off = controller.step(
+            now=start + timedelta(seconds=(LOCKOUT_RELEASE_STEP + 1) * TEST_TICK_SECONDS),
+            grid_power_watts=_grid_power_for_available_amps(
+                18,
+                (
+                    charger_input(
+                        "ev1",
+                        priority=1,
+                        connected=True,
+                        charging=False,
+                        enabled=False,
+                        measured_actual_amps=0,
+                        pilot_setpoint_amps=6,
+                    ),
+                    charger_input(
+                        "ev2",
+                        priority=2,
+                        connected=True,
+                        charging=True,
+                        enabled=True,
+                        measured_actual_amps=18,
+                        pilot_setpoint_amps=18,
+                    ),
+                ),
+            ),
+            grid_voltage_volts=TEST_VOLTAGE_VOLTS,
+            max_grid_import_watts=0,
+            hysteresis_seconds=TEST_HYSTERESIS_SECONDS,
+            chargers=(
+                charger_input(
+                    "ev1",
+                    priority=1,
+                    connected=True,
+                    charging=False,
+                    enabled=False,
+                    measured_actual_amps=0,
+                    pilot_setpoint_amps=6,
+                ),
+                charger_input(
+                    "ev2",
+                    priority=2,
+                    connected=True,
+                    charging=True,
+                    enabled=True,
+                    measured_actual_amps=18,
+                    pilot_setpoint_amps=18,
+                ),
+            ),
+        )
+
+        self.assertTrue(replugged_after_stale_off.charger("ev1").should_enable)
+        self.assertEqual(replugged_after_stale_off.charger("ev1").pilot_request_amps, 6)
+        self.assertEqual(replugged_after_stale_off.charger("ev1").desired_actual_amps, 0)
+
     def test_paused_car_keeps_bootstrap_pilot_while_active_car_gets_rest(self) -> None:
         controller = SurplusController(["ev1", "ev2"])
         snapshot = controller.step(

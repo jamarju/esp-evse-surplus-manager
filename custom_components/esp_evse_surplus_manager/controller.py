@@ -236,62 +236,84 @@ class ControllerChargerInput:
 class HysteresisTracker:
     """Track the two state-change guards for one charger."""
 
-    observed_enabled: bool | None = None
-    observed_changed_at: datetime | None = None
-    condition_met: bool | None = None
-    condition_since: datetime | None = None
+    observed_contactor_closed: bool | None = None
+    observed_contactor_changed_at: datetime | None = None
+    enable_condition_met: bool | None = None
+    enable_condition_since: datetime | None = None
+    disable_condition_met: bool | None = None
+    disable_condition_since: datetime | None = None
 
     def update(
         self,
         *,
         now: datetime,
-        condition_met: bool,
+        enable_condition_met: bool,
+        disable_condition_met: bool,
         desired_enabled: bool,
         observed_enabled: bool,
+        observed_contactor_closed: bool,
         lockout_delay: timedelta,
         settle_delay: timedelta,
         allow_change: bool = True,
     ) -> tuple[bool, bool]:
         """Return the guarded desired enabled state plus whether change is blocked."""
-        self.observe(now=now, observed_enabled=observed_enabled)
-        self._observe_condition(now=now, condition_met=condition_met)
+        self.observe(now=now, observed_contactor_closed=observed_contactor_closed)
+        self._observe_enable_condition(now=now, condition_met=enable_condition_met)
+        self._observe_disable_condition(now=now, condition_met=disable_condition_met)
 
         if not allow_change or desired_enabled == observed_enabled:
             return observed_enabled, False
 
         if desired_enabled:
-            if not condition_met:
+            if not enable_condition_met:
                 return observed_enabled, True
-            if self.condition_since is None or now - self.condition_since < settle_delay:
+            if (
+                self.enable_condition_since is None
+                or now - self.enable_condition_since < settle_delay
+            ):
                 return observed_enabled, True
-        elif not condition_met:
-            if self.condition_since is None or now - self.condition_since < settle_delay:
+        elif not disable_condition_met:
+            if (
+                self.disable_condition_since is None
+                or now - self.disable_condition_since < settle_delay
+            ):
                 return observed_enabled, True
 
         if (
-            self.observed_changed_at is not None
-            and now - self.observed_changed_at < lockout_delay
+            self.observed_contactor_changed_at is not None
+            and now - self.observed_contactor_changed_at < lockout_delay
         ):
             return observed_enabled, True
 
         return desired_enabled, False
 
-    def observe(self, *, now: datetime, observed_enabled: bool) -> None:
-        """Record the latest observed switch state."""
-        if self.observed_enabled != observed_enabled:
-            self.observed_enabled = observed_enabled
-            self.observed_changed_at = now
+    def observe(self, *, now: datetime, observed_contactor_closed: bool) -> None:
+        """Record the latest observed contactor state."""
+        if self.observed_contactor_closed != observed_contactor_closed:
+            self.observed_contactor_closed = observed_contactor_closed
+            self.observed_contactor_changed_at = now
 
-    def _observe_condition(
+    def _observe_enable_condition(
         self,
         *,
         now: datetime,
         condition_met: bool,
     ) -> None:
-        """Track how long surplus conditions have stayed favorable/unfavorable."""
-        if self.condition_met != condition_met:
-            self.condition_met = condition_met
-            self.condition_since = now
+        """Track how long enable conditions have stayed favorable/unfavorable."""
+        if self.enable_condition_met != condition_met:
+            self.enable_condition_met = condition_met
+            self.enable_condition_since = now
+
+    def _observe_disable_condition(
+        self,
+        *,
+        now: datetime,
+        condition_met: bool,
+    ) -> None:
+        """Track how long keep-enabled conditions have stayed favorable/unfavorable."""
+        if self.disable_condition_met != condition_met:
+            self.disable_condition_met = condition_met
+            self.disable_condition_since = now
 
 
 class SurplusController:
@@ -364,10 +386,12 @@ class SurplusController:
         observed_pilot_setpoints: dict[str, int],
         auto_override_ids: set[str] | None = None,
         connected_override_ids: set[str] | None = None,
+        disabled_override_ids: set[str] | None = None,
     ):
         """Build planner inputs, optionally forcing selected chargers into auto mode."""
         override_ids = auto_override_ids or set()
         connected_ids = connected_override_ids or set()
+        disabled_ids = disabled_override_ids or set()
         planning_eligibility: dict[str, bool] = {}
         planner_chargers: list[PlannerCharger] = []
 
@@ -376,7 +400,8 @@ class SurplusController:
                 charger.manual_override and charger.charger_id not in override_ids
             )
             connected = charger.connected or charger.charger_id in connected_ids
-            charging = self._is_charging(charger)
+            enabled = charger.enabled and charger.charger_id not in disabled_ids
+            charging = False if charger.charger_id in disabled_ids else self._is_charging(charger)
             planning_ok = self._planning_eligible(
                 ControllerChargerInput(
                     charger_id=charger.charger_id,
@@ -386,7 +411,7 @@ class SurplusController:
                     max_amps=charger.max_amps,
                     connected=connected,
                     charging=charging,
-                    enabled=charger.enabled,
+                    enabled=enabled,
                     manual_override=manual_override,
                     measured_actual_amps=charger.measured_actual_amps,
                     pilot_setpoint_amps=charger.pilot_setpoint_amps,
@@ -403,7 +428,7 @@ class SurplusController:
                     max_amps=charger.max_amps,
                     connected=connected,
                     charging=charging,
-                    enabled=charger.enabled,
+                    enabled=enabled,
                     manual_override=manual_override,
                     pilot_setpoint_amps=observed_pilot_setpoints[charger.charger_id],
                     measured_actual_amps=charger.measured_actual_amps,
@@ -475,7 +500,13 @@ class SurplusController:
             desired_enabled[charger.charger_id] = (
                 charger.charger_id in manual_result.preferred_enabled_ids
             )
-        condition_met = {}
+        enable_condition_met = {}
+        disable_condition_met = {
+            charger.charger_id: (
+                charger.charger_id in planner_result.preferred_enabled_ids
+            )
+            for charger in chargers
+        }
         for charger in chargers:
             condition_result, _ = self._plan(
                 grid_power_watts=grid_power_watts,
@@ -485,8 +516,9 @@ class SurplusController:
                 observed_pilot_setpoints=observed_pilot_setpoints,
                 auto_override_ids={charger.charger_id},
                 connected_override_ids={charger.charger_id},
+                disabled_override_ids={charger.charger_id},
             )
-            condition_met[charger.charger_id] = (
+            enable_condition_met[charger.charger_id] = (
                 charger.charger_id in condition_result.preferred_enabled_ids
             )
 
@@ -502,9 +534,11 @@ class SurplusController:
             )
             should_enable, blocked_change = self._tracker_for(charger.charger_id).update(
                 now=now,
-                condition_met=condition_met[charger.charger_id],
+                enable_condition_met=enable_condition_met[charger.charger_id],
+                disable_condition_met=disable_condition_met[charger.charger_id],
                 desired_enabled=desired_enabled[charger.charger_id],
                 observed_enabled=charger.enabled,
+                observed_contactor_closed=charging_state[charger.charger_id],
                 lockout_delay=lockout_delay,
                 settle_delay=settle_delay,
                 allow_change=not charger.manual_override,
