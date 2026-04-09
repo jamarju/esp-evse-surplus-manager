@@ -1,0 +1,52 @@
+{
+  "config": {
+    "abort": {
+      "single_instance_allowed": "Only one esp-evse-surplus-manager can be configured.",
+      "no_esp_evse_devices": "No ESP EVSE devices with the expected entity set were found."
+    },
+    "error": {
+      "duplicate_charger_name": "Charger names must be unique.",
+      "duplicate_charger_device": "That ESPHome device is already configured.",
+      "device_inference_failed": "The selected device does not expose the standard ESP EVSE entities this integration expects."
+    },
+    "step": {
+      "user": {
+        "title": "Site configuration",
+        "description": "esp-evse-surplus-manager controls solar-surplus charging for chargers running the ESP EVSE firmware. It is not for the stock OpenEVSE firmware.",
+        "data": {
+          "name": "Controller name",
+          "grid_power_sensor": "Grid power sensor",
+          "grid_voltage_sensor": "Grid voltage sensor",
+          "planner_period_seconds": "Planner period",
+          "hysteresis_seconds": "Contactor lockout time",
+          "debug": "Expose debug sensors"
+        }
+      },
+      "charger": {
+        "title": "Add ESP EVSE charger",
+        "description": "Configured chargers so far: {charger_count}. Only ESP EVSE devices are listed here. The integration will infer the connected sensor, measured current sensor, enable switch, and current/voltage numbers automatically. Priority uses rank order: lower numbers win. Priority 1 gets scarce power first and is the last one to be turned off, priority 2 comes next, and so on. To add more chargers later, use Reconfigure from the integration menu.",
+        "data": {
+          "device_id": "ESP EVSE device",
+          "priority": "Priority rank (lower number = served first)",
+          "add_another_charger": "Add another charger after this one"
+        }
+      },
+      "reconfigure": {
+        "title": "Add ESP EVSE charger",
+        "description": "Add another ESP EVSE charger to this surplus manager."
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Planner options",
+        "data": {
+          "planner_period_seconds": "Planner period",
+          "hysteresis_seconds": "Contactor lockout time",
+          "debug": "Expose debug sensors"
+        }
+      }
+    }
+  }
+}

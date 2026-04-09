@@ -1,0 +1,52 @@
+{
+  "config": {
+    "abort": {
+      "single_instance_allowed": "Solo se puede configurar una instancia de esp-evse-surplus-manager.",
+      "no_esp_evse_devices": "No se han encontrado dispositivos ESP EVSE con el conjunto de entidades esperado."
+    },
+    "error": {
+      "duplicate_charger_name": "Los nombres de los cargadores deben ser únicos.",
+      "duplicate_charger_device": "Ese dispositivo ESPHome ya está configurado.",
+      "device_inference_failed": "El dispositivo seleccionado no expone las entidades estándar de ESP EVSE que espera esta integración."
+    },
+    "step": {
+      "user": {
+        "title": "Configuración del sitio",
+        "description": "esp-evse-surplus-manager controla la carga con excedentes solares de cargadores que ejecutan el firmware ESP EVSE. No sirve para el firmware OpenEVSE estándar.",
+        "data": {
+          "name": "Nombre del controlador",
+          "grid_power_sensor": "Sensor de potencia de red",
+          "grid_voltage_sensor": "Sensor de tensión de red",
+          "planner_period_seconds": "Periodo del planificador",
+          "hysteresis_seconds": "Tiempo de bloqueo del contactor",
+          "debug": "Exponer sensores de depuración"
+        }
+      },
+      "charger": {
+        "title": "Añadir cargador ESP EVSE",
+        "description": "Cargadores configurados hasta ahora: {charger_count}. Aquí solo se muestran dispositivos ESP EVSE. La integración inferirá automáticamente el sensor de conexión, el sensor de corriente medida, el interruptor de habilitación y los números de corriente y tensión. La prioridad usa un orden por rango: los números más bajos ganan. La prioridad 1 recibe antes la potencia escasa y es la última en apagarse, la prioridad 2 va después, y así sucesivamente. Para añadir más cargadores más adelante, usa Reconfigurar en el menú de la integración.",
+        "data": {
+          "device_id": "Dispositivo ESP EVSE",
+          "priority": "Rango de prioridad (número más bajo = primero)",
+          "add_another_charger": "Añadir otro cargador después de este"
+        }
+      },
+      "reconfigure": {
+        "title": "Añadir cargador ESP EVSE",
+        "description": "Añade otro cargador ESP EVSE a este gestor de excedentes."
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones del planificador",
+        "data": {
+          "planner_period_seconds": "Periodo del planificador",
+          "hysteresis_seconds": "Tiempo de bloqueo del contactor",
+          "debug": "Exponer sensores de depuración"
+        }
+      }
+    }
+  }
+}

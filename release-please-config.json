@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "940647a267ecd0f29cb9b85112bb9a53f44f0621",
+  "skip-labeling": true,
+  "packages": {
+    ".": {
+      "release-type": "go",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "custom_components/esp_evse_surplus_manager/manifest.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
+  }
+}

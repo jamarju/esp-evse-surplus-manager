@@ -1,0 +1,11 @@
+{
+  "domain": "esp_evse_surplus_manager",
+  "name": "esp-evse-surplus-manager",
+  "codeowners": [],
+  "config_flow": true,
+  "integration_type": "hub",
+  "iot_class": "calculated",
+  "loggers": ["custom_components.esp_evse_surplus_manager"],
+  "requirements": [],
+  "version": "0.1.0"
+}
