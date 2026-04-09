@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/jamarju/esp-evse-surplus-manager/compare/v0.1.1...v0.1.2) (2026-04-09)
+
+
+### Bug Fixes
+
+* base contactor lockout on real relay state ([ca1ad23](https://github.com/jamarju/esp-evse-surplus-manager/commit/ca1ad235c0e4f39a7b62d55b41bb46544bf15272))
+
 ## [0.1.1](https://github.com/jamarju/esp-evse-surplus-manager/compare/v0.1.0...v0.1.1) (2026-04-09)
 
 
