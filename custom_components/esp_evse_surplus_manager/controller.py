@@ -456,6 +456,7 @@ class SurplusController:
         grid_voltage_volts: float,
         max_grid_import_watts: float,
         hysteresis_seconds: int,
+        state_change_guard_seconds: int = DEFAULT_STATE_CHANGE_GUARD_SECONDS,
         chargers: tuple[ControllerChargerInput, ...],
     ) -> IntegrationSnapshot:
         """Compute a full control snapshot for one planner tick."""
@@ -523,7 +524,7 @@ class SurplusController:
             )
 
         lockout_delay = timedelta(seconds=hysteresis_seconds)
-        settle_delay = timedelta(seconds=DEFAULT_STATE_CHANGE_GUARD_SECONDS)
+        settle_delay = timedelta(seconds=state_change_guard_seconds)
         decisions: list[tuple[ControllerChargerInput, int, bool, bool]] = []
         guarded_shutdown_ids: list[str] = []
 

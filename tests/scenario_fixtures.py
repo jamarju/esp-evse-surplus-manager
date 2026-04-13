@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from custom_components.esp_evse_surplus_manager.const import (
+    DEFAULT_STATE_CHANGE_GUARD_SECONDS,
+)
 from custom_components.esp_evse_surplus_manager.controller import (
     ControllerChargerInput,
     SurplusController,
@@ -20,6 +23,7 @@ class ScenarioFixture:
     start: datetime
     tick_seconds: int
     hysteresis_seconds: int
+    state_change_guard_seconds: int
     samples: list[SimulationSample]
 
 
@@ -57,6 +61,7 @@ def single_ev_surplus_wakeup_fixture() -> ScenarioFixture:
         start=datetime(2026, 1, 1, tzinfo=UTC),
         tick_seconds=20,
         hysteresis_seconds=300,
+        state_change_guard_seconds=DEFAULT_STATE_CHANGE_GUARD_SECONDS,
         samples=[
             SimulationSample(
                 repeat=16,
@@ -76,6 +81,7 @@ def two_ev_threshold_transition_fixture() -> ScenarioFixture:
         start=datetime(2026, 1, 1, tzinfo=UTC),
         tick_seconds=20,
         hysteresis_seconds=300,
+        state_change_guard_seconds=DEFAULT_STATE_CHANGE_GUARD_SECONDS,
         samples=[
             SimulationSample(
                 repeat=16,

@@ -21,11 +21,13 @@ from .const import (
     CONF_PLANNER_PERIOD_SECONDS,
     CONF_PRIORITY,
     CONF_SLUG,
+    CONF_STATE_CHANGE_GUARD_SECONDS,
     CONF_VOLTAGE_NUMBER,
     DEFAULT_DEBUG,
     DEFAULT_HYSTERESIS_SECONDS,
     DEFAULT_NAME,
     DEFAULT_PLANNER_PERIOD_SECONDS,
+    DEFAULT_STATE_CHANGE_GUARD_SECONDS,
 )
 
 
@@ -38,6 +40,7 @@ class GlobalConfig:
     grid_voltage_sensor: str
     planner_period_seconds: int = DEFAULT_PLANNER_PERIOD_SECONDS
     hysteresis_seconds: int = DEFAULT_HYSTERESIS_SECONDS
+    state_change_guard_seconds: int = DEFAULT_STATE_CHANGE_GUARD_SECONDS
     debug: bool = False
 
     @classmethod
@@ -52,6 +55,12 @@ class GlobalConfig:
             ),
             hysteresis_seconds=int(
                 data.get(CONF_HYSTERESIS_SECONDS, DEFAULT_HYSTERESIS_SECONDS)
+            ),
+            state_change_guard_seconds=int(
+                data.get(
+                    CONF_STATE_CHANGE_GUARD_SECONDS,
+                    DEFAULT_STATE_CHANGE_GUARD_SECONDS,
+                )
             ),
             debug=bool(data.get(CONF_DEBUG, DEFAULT_DEBUG)),
         )

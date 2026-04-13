@@ -19,6 +19,7 @@
           "grid_voltage_sensor": "Grid voltage sensor",
           "planner_period_seconds": "Planner period",
           "hysteresis_seconds": "Contactor lockout time",
+          "state_change_guard_seconds": "State-change guard time",
           "debug": "Expose debug sensors"
         }
       },
@@ -44,6 +45,7 @@
         "data": {
           "planner_period_seconds": "Planner period",
           "hysteresis_seconds": "Contactor lockout time",
+          "state_change_guard_seconds": "State-change guard time",
           "debug": "Expose debug sensors"
         }
       }

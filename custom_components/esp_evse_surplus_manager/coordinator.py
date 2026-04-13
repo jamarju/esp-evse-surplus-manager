@@ -140,6 +140,7 @@ class EspEvseSurplusCoordinator(DataUpdateCoordinator[IntegrationSnapshot]):
             grid_voltage_volts=grid_voltage,
             max_grid_import_watts=self.runtime_settings.max_grid_import_watts,
             hysteresis_seconds=self.global_config.hysteresis_seconds,
+            state_change_guard_seconds=self.global_config.state_change_guard_seconds,
             chargers=tuple(
                 self._controller_input(charger) for charger in self.charger_configs
             ),

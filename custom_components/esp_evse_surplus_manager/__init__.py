@@ -10,6 +10,7 @@ from .const import (
     CONF_DEBUG,
     CONF_HYSTERESIS_SECONDS,
     CONF_PLANNER_PERIOD_SECONDS,
+    CONF_STATE_CHANGE_GUARD_SECONDS,
     DOMAIN,
     PLATFORMS,
 )
@@ -60,6 +61,12 @@ async def async_setup_entry(hass: Any, entry: Any) -> bool:
         ),
         hysteresis_seconds=int(
             entry.options.get(CONF_HYSTERESIS_SECONDS, base_config.hysteresis_seconds)
+        ),
+        state_change_guard_seconds=int(
+            entry.options.get(
+                CONF_STATE_CHANGE_GUARD_SECONDS,
+                base_config.state_change_guard_seconds,
+            )
         ),
         debug=bool(entry.options.get(CONF_DEBUG, base_config.debug)),
     )

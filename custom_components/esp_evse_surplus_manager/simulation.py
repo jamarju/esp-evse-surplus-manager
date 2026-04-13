@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
+from .const import DEFAULT_STATE_CHANGE_GUARD_SECONDS
 from .controller import ControllerChargerInput, SurplusController
 from .models import IntegrationSnapshot
 
@@ -34,6 +35,7 @@ def run_timeline(
     start: datetime,
     tick_seconds: int,
     hysteresis_seconds: int,
+    state_change_guard_seconds: int = DEFAULT_STATE_CHANGE_GUARD_SECONDS,
     samples: list[SimulationSample],
     apply_control: bool = True,
 ) -> list[SimulationTick]:
@@ -54,6 +56,7 @@ def run_timeline(
                 grid_voltage_volts=sample.grid_voltage_volts,
                 max_grid_import_watts=sample.max_grid_import_watts,
                 hysteresis_seconds=hysteresis_seconds,
+                state_change_guard_seconds=state_change_guard_seconds,
                 chargers=tuple(current_chargers),
             )
             timeline.append(SimulationTick(at=now, snapshot=snapshot))

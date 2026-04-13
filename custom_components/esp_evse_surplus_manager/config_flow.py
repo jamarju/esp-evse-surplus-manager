@@ -32,11 +32,13 @@ from .const import (
     CONF_PLANNER_PERIOD_SECONDS,
     CONF_PRIORITY,
     CONF_SLUG,
+    CONF_STATE_CHANGE_GUARD_SECONDS,
     CONF_VOLTAGE_NUMBER,
     DEFAULT_DEBUG,
     DEFAULT_HYSTERESIS_SECONDS,
     DEFAULT_NAME,
     DEFAULT_PLANNER_PERIOD_SECONDS,
+    DEFAULT_STATE_CHANGE_GUARD_SECONDS,
     DOMAIN,
 )
 from .discovery import DeviceEntityDescription, infer_esp_evse_entities
@@ -179,6 +181,15 @@ class EspEvseSurplusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(
                         CONF_HYSTERESIS_SECONDS,
                         default=DEFAULT_HYSTERESIS_SECONDS,
+                    ): _number_value_selector(
+                        minimum=60,
+                        maximum=1800,
+                        step=10,
+                        unit="s",
+                    ),
+                    vol.Required(
+                        CONF_STATE_CHANGE_GUARD_SECONDS,
+                        default=DEFAULT_STATE_CHANGE_GUARD_SECONDS,
                     ): _number_value_selector(
                         minimum=60,
                         maximum=1800,
@@ -340,6 +351,13 @@ class EspEvseSurplusOptionsFlow(config_entries.OptionsFlow):
             CONF_HYSTERESIS_SECONDS,
             self._config_entry.data[CONF_HYSTERESIS_SECONDS],
         )
+        current_state_change_guard = self._config_entry.options.get(
+            CONF_STATE_CHANGE_GUARD_SECONDS,
+            self._config_entry.data.get(
+                CONF_STATE_CHANGE_GUARD_SECONDS,
+                DEFAULT_STATE_CHANGE_GUARD_SECONDS,
+            ),
+        )
         current_debug = self._config_entry.options.get(
             CONF_DEBUG,
             self._config_entry.data[CONF_DEBUG],
@@ -361,6 +379,15 @@ class EspEvseSurplusOptionsFlow(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_HYSTERESIS_SECONDS,
                         default=current_hysteresis,
+                    ): _number_value_selector(
+                        minimum=60,
+                        maximum=1800,
+                        step=10,
+                        unit="s",
+                    ),
+                    vol.Required(
+                        CONF_STATE_CHANGE_GUARD_SECONDS,
+                        default=current_state_change_guard,
                     ): _number_value_selector(
                         minimum=60,
                         maximum=1800,

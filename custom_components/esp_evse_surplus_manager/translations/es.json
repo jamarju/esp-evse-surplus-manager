@@ -19,6 +19,7 @@
           "grid_voltage_sensor": "Sensor de tensión de red",
           "planner_period_seconds": "Periodo del planificador",
           "hysteresis_seconds": "Tiempo de bloqueo del contactor",
+          "state_change_guard_seconds": "Tiempo de guarda por cambio de estado",
           "debug": "Exponer sensores de depuración"
         }
       },
@@ -44,6 +45,7 @@
         "data": {
           "planner_period_seconds": "Periodo del planificador",
           "hysteresis_seconds": "Tiempo de bloqueo del contactor",
+          "state_change_guard_seconds": "Tiempo de guarda por cambio de estado",
           "debug": "Exponer sensores de depuración"
         }
       }

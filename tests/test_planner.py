@@ -24,6 +24,7 @@ TEST_TICK_SECONDS = 20
 TEST_VOLTAGE_VOLTS = 230
 TEST_HYSTERESIS_SECONDS = 5 * 60
 TEST_STATE_CHANGE_GUARD_SECONDS = DEFAULT_STATE_CHANGE_GUARD_SECONDS
+ONE_MINUTE_STATE_CHANGE_GUARD_SECONDS = 60
 LOCKOUT_RELEASE_STEP = TEST_HYSTERESIS_SECONDS // TEST_TICK_SECONDS
 LOCKOUT_LAST_BLOCKED_STEP = LOCKOUT_RELEASE_STEP - 1
 LOCKOUT_OBSERVATION_COUNT = LOCKOUT_RELEASE_STEP + 1
@@ -56,6 +57,7 @@ def _run_available_profile(
     available_actual_amps: list[float],
     chargers: tuple,
     hysteresis_seconds: int = TEST_HYSTERESIS_SECONDS,
+    state_change_guard_seconds: int = TEST_STATE_CHANGE_GUARD_SECONDS,
     measurement_fn,
 ) -> list:
     """Run a controller profile while feeding measured-current feedback."""
@@ -73,6 +75,7 @@ def _run_available_profile(
             grid_voltage_volts=TEST_VOLTAGE_VOLTS,
             max_grid_import_watts=0,
             hysteresis_seconds=hysteresis_seconds,
+            state_change_guard_seconds=state_change_guard_seconds,
             chargers=current_chargers,
         )
         snapshots.append(snapshot)
@@ -312,6 +315,7 @@ class SimulationTests(unittest.TestCase):
                 charger_input("ev1", priority=1),
                 charger_input("ev2", priority=2),
             ),
+            state_change_guard_seconds=ONE_MINUTE_STATE_CHANGE_GUARD_SECONDS,
             measurement_fn=lambda charger, snapshot, enabled_next: (
                 float(snapshot.desired_actual_amps)
                 if enabled_next and snapshot.desired_actual_amps > 0
@@ -342,6 +346,7 @@ class SimulationTests(unittest.TestCase):
             start=fixture.start,
             tick_seconds=fixture.tick_seconds,
             hysteresis_seconds=fixture.hysteresis_seconds,
+            state_change_guard_seconds=fixture.state_change_guard_seconds,
             samples=fixture.samples,
         )
 
@@ -546,6 +551,7 @@ class SimulationTests(unittest.TestCase):
             start=fixture.start,
             tick_seconds=fixture.tick_seconds,
             hysteresis_seconds=fixture.hysteresis_seconds,
+            state_change_guard_seconds=fixture.state_change_guard_seconds,
             samples=fixture.samples,
         )
 
@@ -602,6 +608,7 @@ class SimulationTests(unittest.TestCase):
             controller,
             available_actual_amps=[6] * 12 + [5] + [6] * 12,
             chargers=(charger_input("ev1", priority=1),),
+            state_change_guard_seconds=ONE_MINUTE_STATE_CHANGE_GUARD_SECONDS,
             measurement_fn=lambda charger, snapshot, enabled_next: 0.0,
         )
 
@@ -994,7 +1001,7 @@ class SimulationTests(unittest.TestCase):
         snapshots = _run_available_profile(
             controller,
             available_actual_amps=[12] * LOCKOUT_OBSERVATION_COUNT
-            + [11] * (STATE_CHANGE_RELEASE_STEP + 1),
+            + [11] * ((ONE_MINUTE_STATE_CHANGE_GUARD_SECONDS // TEST_TICK_SECONDS) + 1),
             chargers=(
                 charger_input(
                     "ev1",
@@ -1009,6 +1016,7 @@ class SimulationTests(unittest.TestCase):
                     measured_actual_amps=6,
                 ),
             ),
+            state_change_guard_seconds=ONE_MINUTE_STATE_CHANGE_GUARD_SECONDS,
             measurement_fn=lambda charger, snapshot, enabled_next: (
                 float(snapshot.pilot_request_amps) if enabled_next else 0.0
             ),

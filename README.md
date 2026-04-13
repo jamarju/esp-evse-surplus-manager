@@ -21,7 +21,7 @@ This is **not** for the stock OpenEVSE firmware integration in Home Assistant.
 - Allocates scarce current by priority: the highest-priority charger starts first, and lower-priority chargers join only when enough surplus remains for their minimum current
 - Enforces a configurable grid import limit
 - Uses a 5 minute contactor lockout to prevent contactor chattering
-- Uses a 1 minute sustained state-change guard to ignore short transients such as passing clouds
+- Uses a configurable sustained state-change guard to ignore short transients such as passing clouds
 - Supports per-charger manual override
 - Self-corrects pilot setpoint vs actual current draw offsets
 - Automatically forwards measured grid voltage to ESP-EVSE `set_voltage` numbers to get correct V/kW/kWh readings on the ESP-EVSE display
@@ -40,6 +40,7 @@ Then configure:
 - Grid voltage sensor: choose the entity that provides grid voltage measurements
 - Planner period: choose a value that gives your car enough time to ramp up/down to the setpoint. Default: 20 seconds. If your car takes longer than this to reach the setpoint, you should turn it up or the system may oscillate.
 - Contactor lockout time: limits the contactor switching period to reduce wear. Default: 300 seconds.
+- State-change guard time: requires an enable/disable decision to stay valid before the contactor can flip. Useful for filtering brief passing clouds. Default: 180 seconds.
 - Expose debug sensors: adds diagnostic sensors for available current, managed actual current, managed planned current, active managed charger count, and allocator state
 
 On the next screen, select your ESP-EVSE devices and their priority numbers. Lower numbers have higher priority.
@@ -80,7 +81,7 @@ Every planner tick, the integration does this:
 6. A charger is plannable if it is connected, enabled, not in manual override, has a positive pilot, and is charging.
 7. Chargers that are already really charging share the budget evenly. If there is enough budget left for one or more additional chargers to receive their minimum current, those chargers become wake-up candidates and are first offered `6 A`. They are not offered their fair share yet, because the car may already be full, so the controller first pokes the car to see whether it actually wants to charge.
 8. If a charger is enabled but not charging, it stays on a `6 A` poke, but it is skipped for future slot selection, giving lower-priority chargers a chance to wake up instead.
-9. Before the controller actually flips a contactor, the requested change must stay valid for 1 minute. This filters short transients such as passing clouds or brief house-load spikes.
+9. Before the controller actually flips a contactor, the requested change must stay valid for the configured state-change guard time. This filters short transients such as passing clouds or brief house-load spikes. The default is 3 minutes.
 10. The controller also enforces a 5 minute contactor lockout. After a real on/off switch change is observed, that contactor cannot be flipped again until the lockout time has expired.
 11. Both guards are based on observed reality, not just what the planner wants. So a manual switch change is also remembered, and when you later return to auto mode the next automatic flip still has to respect those timers.
 
