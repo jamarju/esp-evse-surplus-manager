@@ -90,6 +90,7 @@ class EspEvseSurplusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._site_data: dict[str, Any] = {}
         self._chargers: list[dict[str, Any]] = []
         self._reconfigure_entry: config_entries.ConfigEntry | None = None
+        self._selected_charger_slug: str | None = None
 
     def _finish_charger_flow(self) -> FlowResult:
         """Finish charger collection for initial setup or reconfigure."""
@@ -148,6 +149,25 @@ class EspEvseSurplusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         options.sort(key=lambda option: option["label"].lower())
         return options
+
+    def _configured_charger_options(self) -> list[selector.SelectOptionDict]:
+        """Return configured chargers as selectable options."""
+        options = [
+            {
+                "value": str(charger[CONF_SLUG]),
+                "label": f"{charger[CONF_NAME]} (priority {int(charger[CONF_PRIORITY])})",
+            }
+            for charger in self._chargers
+        ]
+        options.sort(key=lambda option: option["label"].lower())
+        return options
+
+    def _charger_by_slug(self, charger_slug: str) -> dict[str, Any]:
+        """Return a configured charger by slug."""
+        for charger in self._chargers:
+            if charger.get(CONF_SLUG) == charger_slug:
+                return charger
+        raise ValueError("charger_not_found")
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Collect site-wide configuration."""
@@ -312,12 +332,91 @@ class EspEvseSurplusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self,
         user_input: dict[str, Any] | None = None,
     ) -> FlowResult:
-        """Allow adding chargers later without deleting the integration."""
+        """Allow editing charger priorities or adding chargers later."""
         entry = self._get_reconfigure_entry()
         self._reconfigure_entry = entry
         self._site_data = dict(entry.data)
         self._chargers = [dict(charger) for charger in entry.data.get(CONF_CHARGERS, [])]
-        return await self.async_step_charger(user_input)
+        device_options = self._esp_evse_device_options()
+        charger_options = self._configured_charger_options()
+
+        if not charger_options and not device_options:
+            return self.async_abort(reason="no_esp_evse_devices")
+
+        menu_options: list[str] = []
+        if charger_options:
+            menu_options.append("edit_charger")
+        if device_options:
+            menu_options.append("charger")
+
+        if len(menu_options) == 1:
+            only_action = menu_options[0]
+            if only_action == "edit_charger":
+                return await self.async_step_edit_charger()
+            return await self.async_step_charger()
+
+        return self.async_show_menu(
+            step_id="reconfigure",
+            menu_options=menu_options,
+        )
+
+    async def async_step_edit_charger(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> FlowResult:
+        """Choose which configured charger to edit."""
+        charger_options = self._configured_charger_options()
+        if not charger_options:
+            return await self.async_step_reconfigure()
+
+        if user_input is not None:
+            self._selected_charger_slug = str(user_input[CONF_SLUG])
+            return await self.async_step_edit_priority()
+
+        return self.async_show_form(
+            step_id="edit_charger",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_SLUG): selector.SelectSelector(
+                        selector.SelectSelectorConfig(options=charger_options)
+                    ),
+                }
+            ),
+        )
+
+    async def async_step_edit_priority(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> FlowResult:
+        """Edit one configured charger's priority."""
+        if self._selected_charger_slug is None:
+            return await self.async_step_edit_charger()
+
+        charger = self._charger_by_slug(self._selected_charger_slug)
+        if user_input is not None:
+            charger[CONF_PRIORITY] = int(user_input[CONF_PRIORITY])
+            if bool(user_input[CONF_ADD_ANOTHER_CHARGER]):
+                self._selected_charger_slug = None
+                return await self.async_step_edit_charger()
+            return self._finish_charger_flow()
+
+        return self.async_show_form(
+            step_id="edit_priority",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_PRIORITY, default=int(charger[CONF_PRIORITY])): _number_value_selector(
+                        minimum=1,
+                        maximum=100,
+                        step=1,
+                    ),
+                    vol.Required(
+                        CONF_ADD_ANOTHER_CHARGER,
+                        default=False,
+                    ): selector.BooleanSelector(),
+                }
+            ),
+            description_placeholders={CONF_NAME: str(charger[CONF_NAME])},
+        )
 
     @staticmethod
     @callback

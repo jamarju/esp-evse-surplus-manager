@@ -45,7 +45,7 @@ Then configure:
 
 On the next screen, select your ESP-EVSE devices and their priority numbers. Lower numbers have higher priority.
 
-To add more chargers later, use `Reconfigure` from the integration menu.
+Later, use `Reconfigure` from the integration menu to either add more chargers or change the priority of chargers that are already configured.
 
 ## Grid Import Limiter Function
 

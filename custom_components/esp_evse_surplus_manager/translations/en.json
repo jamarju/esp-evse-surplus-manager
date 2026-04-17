@@ -33,8 +33,27 @@
         }
       },
       "reconfigure": {
-        "title": "Add ESP EVSE charger",
-        "description": "Add another ESP EVSE charger to this surplus manager."
+        "title": "Reconfigure chargers",
+        "description": "Add another ESP EVSE charger or change the priority of one that is already configured.",
+        "menu_options": {
+          "edit_charger": "Edit existing charger priority",
+          "charger": "Add another charger"
+        }
+      },
+      "edit_charger": {
+        "title": "Select charger",
+        "description": "Choose which configured ESP EVSE charger you want to edit.",
+        "data": {
+          "slug": "Configured charger"
+        }
+      },
+      "edit_priority": {
+        "title": "Edit charger priority",
+        "description": "Update the priority rank for {name}. Lower numbers are served first.",
+        "data": {
+          "priority": "Priority rank (lower number = served first)",
+          "add_another_charger": "Edit another charger after this one"
+        }
       }
     }
   },

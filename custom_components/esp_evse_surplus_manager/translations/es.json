@@ -33,8 +33,27 @@
         }
       },
       "reconfigure": {
-        "title": "Añadir cargador ESP EVSE",
-        "description": "Añade otro cargador ESP EVSE a este gestor de excedentes."
+        "title": "Reconfigurar cargadores",
+        "description": "Añade otro cargador ESP EVSE o cambia la prioridad de uno que ya esté configurado.",
+        "menu_options": {
+          "edit_charger": "Editar la prioridad de un cargador existente",
+          "charger": "Añadir otro cargador"
+        }
+      },
+      "edit_charger": {
+        "title": "Seleccionar cargador",
+        "description": "Elige qué cargador ESP EVSE configurado quieres editar.",
+        "data": {
+          "slug": "Cargador configurado"
+        }
+      },
+      "edit_priority": {
+        "title": "Editar prioridad del cargador",
+        "description": "Actualiza el rango de prioridad de {name}. Los números más bajos se atienden primero.",
+        "data": {
+          "priority": "Rango de prioridad (número más bajo = primero)",
+          "add_another_charger": "Editar otro cargador después de este"
+        }
       }
     }
   },
