@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/jamarju/esp-evse-surplus-manager/compare/v0.1.2...v0.2.0) (2026-04-17)
+
+
+### Features
+
+* add charger priority editing to reconfigure flow ([c8d3920](https://github.com/jamarju/esp-evse-surplus-manager/commit/c8d3920d78e75d641c9add2ba63f93450f0682ec))
+
 ## [0.1.2](https://github.com/jamarju/esp-evse-surplus-manager/compare/v0.1.1...v0.1.2) (2026-04-09)
 
 
